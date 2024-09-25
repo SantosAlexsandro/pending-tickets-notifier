@@ -7,11 +7,29 @@ axios.defaults.headers.common["Authorization"] = process.env.API_AUTH_KEY;
 
 const url = "https://apiintegracao.milvus.com.br/api/chamado/listagem";
 
-// Lista de usuários e seus respectivos e-mails
-const userEmails = {
-  fabio: "alexsandro.santos@conab.com.br",
-  //ana: "ana@exemplo.com",
-  //carlos: "carlos@exemplo.com",
+// Definindo os setores com seus respectivos e-mails e usuários
+const setores = {
+  Vendas: {
+    emails: [
+      "carlos.augusto@conab.com.br",
+      "alex.dutra@conab.com.br",
+      "cesar.augusto@conab.com.br",
+    ],
+    users: ["alex", "luis", "andrew", "cesar", "wander", "carlos"], // Usuários cujos tickets serão incluídos neste setor
+  },
+  Astec: {
+    emails: ["laercio.silva@conab.com.br"],
+    users: ["laercio", "renan", "joão", "ana", "fernando"], // Outros usuários de um setor diferente
+  },
+  Suprimentos: {
+    emails: ["fabio.moraes@conab.com.br"],
+    users: ["luiz", "vinicius"], // Outros usuários de um setor diferente
+  },
+  Financeiro: {
+    emails: ["fabio.moraes@conab.com.br"],
+    users: ["fabio", "renan", "cintia", "andressa", "dalva"], // Outros usuários de um setor diferente
+  },
+  // Adicione mais setores conforme necessário
 };
 
 class MilvusTicketsList {
@@ -30,40 +48,40 @@ class MilvusTicketsList {
     const normalizeUserName = (user) =>
       user.trim().split(".")[0].split(" ")[0].toLowerCase();
 
-    // Objeto para agrupar os tickets por usuário normalizado
-    const normalizedGroupedTickets = {};
+    // Objeto para agrupar os tickets por setor
+    const setorTickets = {};
 
     // Itera sobre os tickets e agrupa por nome normalizado
     Object.entries(groupedTickets).forEach(([user, tickets]) => {
-      // Divide usuários por vírgulas, caso existam múltiplos
-      const usersArray = user.split(",");
+      const normalizedUser = normalizeUserName(user);
 
-      usersArray.forEach((singleUser) => {
-        const normalizedUser = normalizeUserName(singleUser); // Normaliza o nome do usuário
-
-        if (!normalizedGroupedTickets[normalizedUser]) {
-          normalizedGroupedTickets[normalizedUser] = []; // Inicializa o array se não existir
+      // Verifica se o usuário pertence a algum setor
+      Object.entries(setores).forEach(([setor, config]) => {
+        if (config.users.includes(normalizedUser)) {
+          if (!setorTickets[setor]) {
+            setorTickets[setor] = []; // Inicializa o array se não existir
+          }
+          setorTickets[setor].push(...tickets);
         }
-
-        // Adiciona os tickets ao grupo do usuário normalizado
-        normalizedGroupedTickets[normalizedUser].push(...tickets);
       });
     });
 
-    const emailPromises = Object.entries(normalizedGroupedTickets).map(
-      async ([user, tickets]) => {
-        if (tickets.length > 0) {
-          const userEmail = userEmails[user];
-          if (userEmail) {
-            return sendEmail(user, userEmail, tickets);
-          }
+    // Envia emails para cada setor com os tickets agrupados
+    const emailPromises = Object.entries(setorTickets).map(
+      async ([setor, tickets]) => {
+        const { emails } = setores[setor];
+        if (tickets.length > 0 && emails.length > 0) {
+          console.log(
+            `Enviando tickets do setor ${setor} para: ${emails.join(", ")}`
+          );
+          return sendEmail(setor, emails, tickets);
         }
       }
     );
 
     await Promise.all(emailPromises);
 
-    return res.json(normalizedGroupedTickets);
+    return res.json(setorTickets);
   }
 }
 
@@ -89,7 +107,8 @@ function groupByUser(tickets) {
         assunto: assunto,
         motivo_pausa: motivo_pausa,
         data_criacao: data_criacao,
-        ultima_log_data: ultima_log_data, // Melhor manter o nome mais descritivo
+        ultima_log_data: ultima_log_data,
+        contato: contato,
       });
     }
 
@@ -97,7 +116,7 @@ function groupByUser(tickets) {
   }, {});
 }
 
-function sendEmail(user, toEmail, tickets) {
+function sendEmail(setor, toEmails, tickets) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
@@ -105,14 +124,11 @@ function sendEmail(user, toEmail, tickets) {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    //tls: {
-    //rejectUnauthorized: false
-    //}
   });
 
   const dataAtualServidor = moment();
 
-  // Ordenar tickets pela diferença de dias sem interação (do maior para o menor)
+  // Ordenar tickets pela diferença de dias sem interação
   const orderedTickets = tickets
     .map((ticket) => {
       const diasSemInteracao = dataAtualServidor.diff(
@@ -124,7 +140,18 @@ function sendEmail(user, toEmail, tickets) {
         diasSemInteracao,
       };
     })
-    .sort((a, b) => b.diasSemInteracao - a.diasSemInteracao); // Ordenação decrescente
+
+    // Filtra tickets com menos de 2 dias de interação
+    .filter((ticket) => ticket.diasSemInteracao >= 2)
+    .sort((a, b) => b.diasSemInteracao - a.diasSemInteracao);
+
+  // Se não houver tickets após a filtragem, não enviar e-mail
+  if (orderedTickets.length === 0) {
+    console.log(
+      `Nenhum ticket relevante para o setor ${setor}, e-mail não enviado.`
+    );
+    return;
+  }
 
   // Criando a tabela com os dados
   const tableRows = orderedTickets
@@ -136,10 +163,11 @@ function sendEmail(user, toEmail, tickets) {
         <td>${ticket.diasSemInteracao}</td>
         <td>${ticket.assunto}</td>
         <td>${ticket.motivo_pausa}</td>
+        <td>${ticket.contato}</td>
       </tr>
     `;
     })
-    .join(""); // .join('') para juntar todas as linhas da tabela em uma string única
+    .join("");
 
   // Contador total de tickets
   const totalTickets = orderedTickets.length;
@@ -147,12 +175,12 @@ function sendEmail(user, toEmail, tickets) {
   const htmlContent = `
   <div  style="color: red;"><b>[Mensagem automática, por favor, não responda a esse e-mail]</b></div>
   <br/>
-  <div>Olá, <b>${capitalizeFirstLetter(user)} </b>, tudo bem? </div>
+  <div>Olá, prezados, tudo bem? </div>
   <br/>
-  <div>Os tickets listados abaixo aguardam sua interação no Milvus. Sua resposta é crucial para avançarmos na resolução dos casos ou encerrarmos o atendimento, permitindo o seguimento para outras solicitações, dúvidas e correções.</div>
+  <div>O(s) ticket(s) listado(s) abaixo aguarda(m) sua interação no Milvus. Sua resposta é crucial para avançarmos na resolução do(s) caso(s) ou encerrarmos o atendimento, permitindo o seguimento para outras solicitações, dúvidas e correções.</div>
   <br/>
 
-   <h2>Tickets pendentes de interação</h2>
+   <h2>Ticket(s) pendente(s) de interação</h2>
   <table border="1" cellpadding="10" cellspacing="0">
     <thead>
       <tr>
@@ -161,6 +189,7 @@ function sendEmail(user, toEmail, tickets) {
         <th>Dias sem interação</th>
         <th>Assunto</th>
         <th>Situação</th>
+        <th>Contato</th>
       </tr>
     </thead>
     <tbody>
@@ -172,23 +201,28 @@ function sendEmail(user, toEmail, tickets) {
 `;
 
   const mailOptions = {
-    from: "alexsandro.santos@conab.com.br",
-    to: toEmail, // Usa o e-mail passado como parâmetro
-    subject: "Tickets pendentes de interação [Mensagem automática]",
-    html: htmlContent, // Corpo do e-mail com HTML (tabela)
+    from: "cpd4@conab.com.br",
+    to: toEmails.join(", "), // Envia para os e-mails definidos no setor
+    cc: [
+      "marcelo.pimentel@conab.com.br",
+      "hamilton.bertolucci@conab.com.br",
+    ].join(", "), // Converte o array para string de e-mails separados por vírgula
+    bcc: "alexsandro.santos@conab.com.br", // E-mails em cópia oculta
+    subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
+    html: htmlContent,
   };
 
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
-      console.log(error);
+      console.log(`Erro ao enviar email para setor ${setor}:`, error);
     } else {
-      console.log("E-mail enviado: " + info.response);
+      console.log(`E-mail enviado para setor ${setor}: ${info.response}`);
     }
   });
 }
 
 function capitalizeFirstLetter(string) {
-  if (!string || typeof string !== "string") return ""; // Verifica se é uma string válida
+  if (!string || typeof string !== "string") return "";
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
