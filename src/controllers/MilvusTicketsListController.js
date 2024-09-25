@@ -1,9 +1,9 @@
 const nodemailer = require("nodemailer");
 const axios = require("axios");
 const moment = require("moment");
+require("dotenv").config(); // Carrega variáveis de ambiente
 
-axios.defaults.headers.common["Authorization"] =
-  "uTLcDZAvKaEavsKRJJMwxQmuCvtbU5iExCfI1kx52hAul46yDWVbumu0wLJN6dPyzXgKw7cAncjgp4jSKJ0lvaFIun6uypfiyzaCy";
+axios.defaults.headers.common["Authorization"] = process.env.API_AUTH_KEY;
 
 const url = "https://apiintegracao.milvus.com.br/api/chamado/listagem";
 
@@ -50,20 +50,20 @@ class MilvusTicketsList {
       });
     });
 
-    // Exemplo de como enviar emails com os tickets normalizados
-    Object.entries(normalizedGroupedTickets).forEach(([user, tickets]) => {
-      if (tickets.length > 0) {
-        console.log(`Enviando email para ${user} com os tickets:`, tickets);
-
-        // Chama a função de envio de e-mail passando o e-mail correspondente ao usuário
-        const userEmail = userEmails[user];
-        if (userEmail) {
-          sendEmail(user, userEmail, tickets); // Agora envia para o e-mail do usuário
+    const emailPromises = Object.entries(normalizedGroupedTickets).map(
+      async ([user, tickets]) => {
+        if (tickets.length > 0) {
+          const userEmail = userEmails[user];
+          if (userEmail) {
+            return sendEmail(user, userEmail, tickets);
+          }
         }
       }
-    });
+    );
 
-    return res.json(groupedTickets);
+    await Promise.all(emailPromises);
+
+    return res.json(normalizedGroupedTickets);
   }
 }
 
@@ -99,11 +99,11 @@ function groupByUser(tickets) {
 
 function sendEmail(user, toEmail, tickets) {
   const transporter = nodemailer.createTransport({
-    host: "smtp-mail.outlook.com",
-    port: 587,
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
     auth: {
-      user: "alexsandro.santos@conab.com.br",
-      pass: "Al8725@",
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
     },
     //tls: {
     //rejectUnauthorized: false
