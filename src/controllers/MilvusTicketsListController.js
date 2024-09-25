@@ -7,6 +7,13 @@ axios.defaults.headers.common["Authorization"] =
 
 const url = "https://apiintegracao.milvus.com.br/api/chamado/listagem";
 
+// Lista de usuários e seus respectivos e-mails
+const userEmails = {
+  fabio: "alexsandro.santos@conab.com.br",
+  //ana: "ana@exemplo.com",
+  //carlos: "carlos@exemplo.com",
+};
+
 class MilvusTicketsList {
   async store(req, res) {
     // Se precisar de query params
@@ -47,8 +54,12 @@ class MilvusTicketsList {
     Object.entries(normalizedGroupedTickets).forEach(([user, tickets]) => {
       if (tickets.length > 0) {
         console.log(`Enviando email para ${user} com os tickets:`, tickets);
-        // Aqui você pode chamar sua função de envio de email
-        sendEmail(user, tickets);
+
+        // Chama a função de envio de e-mail passando o e-mail correspondente ao usuário
+        const userEmail = userEmails[user];
+        if (userEmail) {
+          sendEmail(user, userEmail, tickets); // Agora envia para o e-mail do usuário
+        }
       }
     });
 
@@ -86,11 +97,7 @@ function groupByUser(tickets) {
   }, {});
 }
 
-function sendEmail(user, tickets) {
-  if (user !== "fabio") {
-    return;
-  }
-
+function sendEmail(user, toEmail, tickets) {
   const transporter = nodemailer.createTransport({
     host: "smtp-mail.outlook.com",
     port: 587,
@@ -166,8 +173,7 @@ function sendEmail(user, tickets) {
 
   const mailOptions = {
     from: "alexsandro.santos@conab.com.br",
-    to: "marcelo.pimentel@conab.com.br",
-    // to: "alexsandro.santos@conab.com.br",
+    to: toEmail, // Usa o e-mail passado como parâmetro
     subject: "Tickets pendentes de interação [Mensagem automática]",
     html: htmlContent, // Corpo do e-mail com HTML (tabela)
   };
