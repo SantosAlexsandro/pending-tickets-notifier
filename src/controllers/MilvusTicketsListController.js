@@ -27,7 +27,7 @@ const setores = {
   },
   Financeiro: {
     emails: ["fabio.moraes@conab.com.br"],
-    users: ["fabio", "renan", "cintia", "andressa", "dalva"], // Outros usuários de um setor diferente
+    users: ["fabio", "cintia", "andressa", "dalva"], // Outros usuários de um setor diferente
   },
   // Adicione mais setores conforme necessário
 };
@@ -206,6 +206,7 @@ function sendEmail(setor, toEmails, tickets) {
     cc: [
       "marcelo.pimentel@conab.com.br",
       "hamilton.bertolucci@conab.com.br",
+      "8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms",
     ].join(", "), // Converte o array para string de e-mails separados por vírgula
     bcc: "alexsandro.santos@conab.com.br", // E-mails em cópia oculta
     subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
