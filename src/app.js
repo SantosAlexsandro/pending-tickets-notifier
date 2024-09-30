@@ -38,14 +38,14 @@ class App {
   }
 
   routes() {
-    this.app.use("/", milvusTicketsListRoutes);
+    //this.app.use("/", milvusTicketsListRoutes);
     // this.app.use('/tokens/', tokenRoutes);
   }
 
   startCronJob() {
     // Configura o cron job para rodar a cada minuto
-    cron.schedule("* * * * *", () => {
-      console.log("Executando a cada minuto");
+    cron.schedule("39 7 * * *", () => {
+      console.log("Executando diariamente as 7:30");
       MilvusTicketsList.executeTask(); // Chama a função sem req e res
     });
   }

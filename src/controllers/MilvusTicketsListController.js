@@ -88,6 +88,8 @@ class MilvusTicketsList {
       });
     });
 
+    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+
     // Envia emails para cada setor com os tickets agrupados
     const emailPromises = Object.entries(setorTickets).map(
       async ([setor, tickets]) => {
@@ -96,7 +98,8 @@ class MilvusTicketsList {
           console.log(
             `Enviando tickets do setor ${setor} para: ${emails.join(", ")}`
           );
-          return sendEmail(setor, emails, tickets);
+          await sendEmail(setor, emails, tickets);
+          await delay(2000); // Espera 2 segundos entre os envios
         }
       }
     );
@@ -227,7 +230,7 @@ function sendEmail(setor, toEmails, tickets) {
       "alexsandro.santos@conab.com.br",
       [
         "marcelo.pimentel@conab.com.br",
-        // "hamilton.bertolucci@conab.com.br",
+        "hamilton.bertolucci@conab.com.br",
         "8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms",
       ].join(", ")
     ), // Converte o array para string de e-mails separados por vírgula
