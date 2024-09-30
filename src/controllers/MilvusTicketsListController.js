@@ -1,4 +1,5 @@
 const nodemailer = require("nodemailer");
+
 const axios = require("axios");
 const moment = require("moment");
 require("dotenv").config(); // Carrega variáveis de ambiente
@@ -7,41 +8,62 @@ axios.defaults.headers.common["Authorization"] = process.env.API_AUTH_KEY;
 
 const url = "https://apiintegracao.milvus.com.br/api/chamado/listagem";
 
+let isDev = true;
+
+// Função para definir emails de acordo com o ambiente
+const getEmails = (devEmail, prodEmails) => (isDev ? [devEmail] : prodEmails);
+
 // Definindo os setores com seus respectivos e-mails e usuários
 const setores = {
   Vendas: {
-    emails: [
+    emails: getEmails("alexsandro.santos@conab.com.br", [
       "carlos.augusto@conab.com.br",
       "alex.dutra@conab.com.br",
       "cesar.augusto@conab.com.br",
-    ],
-    users: ["alex", "luis", "andrew", "cesar", "wander", "carlos"], // Usuários cujos tickets serão incluídos neste setor
+    ]),
+    users: ["alex", "luis", "andrew", "cesar", "wander", "carlos"],
   },
   Astec: {
-    emails: ["laercio.silva@conab.com.br"],
-    users: ["laercio", "renan", "joão", "ana", "fernando"], // Outros usuários de um setor diferente
+    emails: getEmails("alexsandro.santos@conab.com.br", [
+      "laercio.silva@conab.com.br",
+    ]),
+    users: ["laercio", "renan", "joão", "ana", "fernando"],
   },
   Suprimentos: {
-    emails: ["fabio.moraes@conab.com.br"],
-    users: ["luiz", "vinicius"], // Outros usuários de um setor diferente
+    emails: getEmails("alexsandro.santos@conab.com.br", [
+      "fabio.moraes@conab.com.br",
+    ]),
+    users: ["luiz", "vinicius"],
   },
   Financeiro: {
-    emails: ["fabio.moraes@conab.com.br"],
-    users: ["fabio", "cintia", "andressa", "dalva"], // Outros usuários de um setor diferente
+    emails: getEmails("alexsandro.santos@conab.com.br", [
+      "fabio.moraes@conab.com.br",
+    ]),
+    users: ["fabio", "cintia", "andressa", "dalva"],
   },
   // Adicione mais setores conforme necessário
 };
 
+let reqBody = {
+  filtro_body: {
+    status: 3,
+  },
+};
+
 class MilvusTicketsList {
-  async store(req, res) {
+  async executeTask() {
+    console.log("INIT", "INIT");
     // Se precisar de query params
     const params = {
       total_registros: 200,
     };
-
-    const tickets = await axios.post(url, req.body, {
+    const tickets = await axios.post(url, reqBody, {
       params: params,
+      headers: {
+        "Content-Type": "application/json", // Isso geralmente é configurado automaticamente
+      },
     });
+
     const groupedTickets = groupByUser(tickets.data.lista);
 
     // Função para normalizar o nome (remover pontos, pegar o primeiro nome e garantir formato correto)
@@ -80,8 +102,6 @@ class MilvusTicketsList {
     );
 
     await Promise.all(emailPromises);
-
-    return res.json(setorTickets);
   }
 }
 
@@ -203,11 +223,14 @@ function sendEmail(setor, toEmails, tickets) {
   const mailOptions = {
     from: "cpd4@conab.com.br",
     to: toEmails.join(", "), // Envia para os e-mails definidos no setor
-    cc: [
-      "marcelo.pimentel@conab.com.br",
-      "hamilton.bertolucci@conab.com.br",
-      "8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms",
-    ].join(", "), // Converte o array para string de e-mails separados por vírgula
+    cc: getEmails(
+      "alexsandro.santos@conab.com.br",
+      [
+        "marcelo.pimentel@conab.com.br",
+        // "hamilton.bertolucci@conab.com.br",
+        "8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms",
+      ].join(", ")
+    ), // Converte o array para string de e-mails separados por vírgula
     bcc: "alexsandro.santos@conab.com.br", // E-mails em cópia oculta
     subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
     html: htmlContent,
@@ -227,4 +250,4 @@ function capitalizeFirstLetter(string) {
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-export default new MilvusTicketsList();
+module.exports = new MilvusTicketsList();
