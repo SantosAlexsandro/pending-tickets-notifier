@@ -33,7 +33,7 @@ const setores = {
     emails: getEmails("alexsandro.santos@conab.com.br", [
       "fabio.moraes@conab.com.br",
     ]),
-    users: ["luiz", "vinicius"],
+    users: ["luiz", "vinicius", "lucas"],
   },
   Financeiro: {
     emails: getEmails("alexsandro.santos@conab.com.br", [
@@ -248,9 +248,13 @@ function sendEmail(setor, toEmails, tickets) {
   });
 }
 
+
 function capitalizeFirstLetter(string) {
   if (!string || typeof string !== "string") return "";
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 module.exports = new MilvusTicketsList();
+
+
+
