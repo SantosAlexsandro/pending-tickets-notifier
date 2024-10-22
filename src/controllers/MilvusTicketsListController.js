@@ -148,6 +148,9 @@ function sendEmail(setor, toEmails, tickets) {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    tls: {
+      rejectUnauthorized: false // ignora erro de certificado
+    },
     logger: true, // ativa os logs
     debug: true, // ativa o modo de depuração
   });
