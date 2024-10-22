@@ -28,6 +28,7 @@ const setores = {
       "laercio.silva@conab.com.br",
     ]),
     users: ["laercio", "renan", "joão", "ana", "fernando"],
+    users: ["laercio", "renan", "joão", "ana", "fernando", "edson"],
   },
   Suprimentos: {
     emails: getEmails("alexsandro.santos@conab.com.br", [
@@ -147,6 +148,8 @@ function sendEmail(setor, toEmails, tickets) {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
+    logger: true, // ativa os logs
+    debug: true, // ativa o modo de depuração
   });
 
   const dataAtualServidor = moment();
@@ -248,13 +251,9 @@ function sendEmail(setor, toEmails, tickets) {
   });
 }
 
-
 function capitalizeFirstLetter(string) {
   if (!string || typeof string !== "string") return "";
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
 module.exports = new MilvusTicketsList();
-
-
-
