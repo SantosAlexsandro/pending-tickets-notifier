@@ -99,7 +99,7 @@ class MilvusTicketsList {
             `Enviando tickets do setor ${setor} para: ${emails.join(", ")}`
           );
           await sendEmail(setor, emails, tickets);
-          await delay(10000); // Espera 2 segundos entre os envios
+          await delay(10000); // Espera 10 segundos entre os envios
         }
       }
     );
@@ -153,8 +153,8 @@ function sendEmail(setor, toEmails, tickets) {
       rejectUnauthorized: false // ignora erro de certificado
     },
     connectionTimeout: 60000, // 60 segundos
-    logger: true, // ativa os logs
-    debug: true, // ativa o modo de depuração
+    logger: false, // ativa os logs
+    debug: false, // ativa o modo de depuração
   });
 
   const dataAtualServidor = moment();
