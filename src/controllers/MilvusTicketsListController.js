@@ -245,10 +245,13 @@ function sendEmail(setor, toEmails, tickets) {
   transporter.sendMail(mailOptions, (error, info) => {
     if (error) {
       console.log(`Erro ao enviar email para setor ${setor}:`, error);
+      console.log(`Erro detalhado: ${JSON.stringify(error, null, 2)}`);
     } else {
       console.log(`E-mail enviado para setor ${setor}: ${info.response}`);
     }
   });
+
+
 }
 
 function capitalizeFirstLetter(string) {
