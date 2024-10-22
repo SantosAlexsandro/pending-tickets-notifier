@@ -149,6 +149,7 @@ function sendEmail(setor, toEmails, tickets) {
       pass: process.env.SMTP_PASS,
     },
     tls: {
+      ciphers: 'SSLv3',
       rejectUnauthorized: false // ignora erro de certificado
     },
     logger: true, // ativa os logs
