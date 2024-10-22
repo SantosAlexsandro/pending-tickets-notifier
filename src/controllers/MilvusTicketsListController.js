@@ -152,6 +152,7 @@ function sendEmail(setor, toEmails, tickets) {
       ciphers: 'SSLv3',
       rejectUnauthorized: false // ignora erro de certificado
     },
+    connectionTimeout: 60000, // 60 segundos
     logger: true, // ativa os logs
     debug: true, // ativa o modo de depuração
   });
