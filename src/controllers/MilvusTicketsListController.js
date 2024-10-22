@@ -27,7 +27,6 @@ const setores = {
     emails: getEmails("alexsandro.santos@conab.com.br", [
       "laercio.silva@conab.com.br",
     ]),
-    users: ["laercio", "renan", "joão", "ana", "fernando"],
     users: ["laercio", "renan", "joão", "ana", "fernando", "edson"],
   },
   Suprimentos: {
