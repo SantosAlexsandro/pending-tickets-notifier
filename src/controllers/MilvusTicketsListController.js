@@ -99,7 +99,7 @@ class MilvusTicketsList {
             `Enviando tickets do setor ${setor} para: ${emails.join(", ")}`
           );
           await sendEmail(setor, emails, tickets);
-          await delay(2000); // Espera 2 segundos entre os envios
+          await delay(10000); // Espera 2 segundos entre os envios
         }
       }
     );
@@ -143,7 +143,7 @@ function sendEmail(setor, toEmails, tickets) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
-    secure: true, // ajuste se necessário (true para SSL, false para TLS)
+    secure: false, // ajuste se necessário (true para SSL, false para TLS)
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
