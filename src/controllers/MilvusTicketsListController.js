@@ -256,6 +256,14 @@ function sendEmail(setor, toEmails, tickets) {
     }
   });
 
+  transporter.verify(function(error, success) {
+    if (error) {
+          console.log('Erro de conexão:', error);
+    } else {
+          console.log('O servidor está pronto para receber nossas mensagens');
+    }
+  });
+
 
 }
 
