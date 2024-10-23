@@ -31,15 +31,15 @@ const setores = {
   },
   Suprimentos: {
     emails: getEmails("alexsandro.santos@conab.com.br", [
-      "fabio.moraes@conab.com.br",
+      "setor_compras@conab.com.br",
     ]),
-    users: ["luiz", "vinicius", "lucas"],
+    users: ["luiz", "vinicius", "lucas", "weleson", "edgar"],
   },
   Financeiro: {
     emails: getEmails("alexsandro.santos@conab.com.br", [
-      "fabio.moraes@conab.com.br",
+      "setor_financeiro@conab.com.br",
     ]),
-    users: ["fabio", "cintia", "andressa", "dalva"],
+    users: ["fabio", "cintia", "andressa", "dalva", "raiane", "fernanda"],
   },
   // Adicione mais setores conforme necessário
 };
