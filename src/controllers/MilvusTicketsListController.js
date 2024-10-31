@@ -1,12 +1,12 @@
-const nodemailer = require("nodemailer");
+const nodemailer = require('nodemailer');
 
-const axios = require("axios");
-const moment = require("moment");
-require("dotenv").config(); // Carrega variáveis de ambiente
+const axios = require('axios');
+const moment = require('moment');
+require('dotenv').config(); // Carrega variáveis de ambiente
 
-axios.defaults.headers.common["Authorization"] = process.env.API_AUTH_KEY;
+axios.defaults.headers.common['Authorization'] = process.env.API_AUTH_KEY;
 
-const url = "https://apiintegracao.milvus.com.br/api/chamado/listagem";
+const url = 'https://apiintegracao.milvus.com.br/api/chamado/listagem';
 
 let isDev = false;
 
@@ -16,30 +16,30 @@ const getEmails = (devEmail, prodEmails) => (isDev ? [devEmail] : prodEmails);
 // Definindo os setores com seus respectivos e-mails e usuários
 const setores = {
   Vendas: {
-    emails: getEmails("alexsandro.santos@conab.com.br", [
-      "carlos.augusto@conab.com.br",
-      "alex.dutra@conab.com.br",
-      "cesar.augusto@conab.com.br",
+    emails: getEmails('alexsandro.santos@conab.com.br', [
+      'carlos.augusto@conab.com.br',
+      'alex.dutra@conab.com.br',
+      'cesar.augusto@conab.com.br',
     ]),
-    users: ["alex", "luis", "andrew", "cesar", "wander", "carlos"],
+    users: ['alex', 'luis', 'andrew', 'cesar', 'wander', 'carlos'],
   },
   Astec: {
-    emails: getEmails("alexsandro.santos@conab.com.br", [
-      "laercio.silva@conab.com.br",
+    emails: getEmails('alexsandro.santos@conab.com.br', [
+      'laercio.silva@conab.com.br',
     ]),
-    users: ["laercio", "renan", "joão", "ana", "fernando", "edson"],
+    users: ['laercio', 'renan', 'joão', 'ana', 'fernando', 'edson'],
   },
   Suprimentos: {
-    emails: getEmails("alexsandro.santos@conab.com.br", [
-      "setor_compras@conab.com.br",
+    emails: getEmails('alexsandro.santos@conab.com.br', [
+      'setor_compras@conab.com.br',
     ]),
-    users: ["luiz", "vinicius", "lucas", "weleson", "edgar"],
+    users: ['luiz', 'vinicius', 'lucas', 'weleson', 'edgar'],
   },
   Financeiro: {
-    emails: getEmails("alexsandro.santos@conab.com.br", [
-      "setor_financeiro@conab.com.br",
+    emails: getEmails('alexsandro.santos@conab.com.br', [
+      'setor_financeiro@conab.com.br',
     ]),
-    users: ["fabio", "cintia", "andressa", "dalva", "raiane", "fernanda"],
+    users: ['fabio', 'cintia', 'andressa', 'dalva', 'raiane', 'fernanda'],
   },
   // Adicione mais setores conforme necessário
 };
@@ -52,7 +52,7 @@ let reqBody = {
 
 class MilvusTicketsList {
   async executeTask() {
-    console.log("INIT", "INIT");
+    console.log('INIT', 'INIT');
     // Se precisar de query params
     const params = {
       total_registros: 200,
@@ -60,7 +60,7 @@ class MilvusTicketsList {
     const tickets = await axios.post(url, reqBody, {
       params: params,
       headers: {
-        "Content-Type": "application/json", // Isso geralmente é configurado automaticamente
+        'Content-Type': 'application/json', // Isso geralmente é configurado automaticamente
       },
     });
 
@@ -68,7 +68,7 @@ class MilvusTicketsList {
 
     // Função para normalizar o nome (remover pontos, pegar o primeiro nome e garantir formato correto)
     const normalizeUserName = (user) =>
-      user.trim().split(".")[0].split(" ")[0].toLowerCase();
+      user.trim().split('.')[0].split(' ')[0].toLowerCase();
 
     // Objeto para agrupar os tickets por setor
     const setorTickets = {};
@@ -96,10 +96,10 @@ class MilvusTicketsList {
         const { emails } = setores[setor];
         if (tickets.length > 0 && emails.length > 0) {
           console.log(
-            `Enviando tickets do setor ${setor} para: ${emails.join(", ")}`
+            `Enviando tickets do setor ${setor} para: ${emails.join(', ')}`
           );
           await sendEmail(setor, emails, tickets);
-          await delay(10000); // Espera 10 segundos entre os envios
+          await delay(30000); // Espera 10 segundos entre os envios
         }
       }
     );
@@ -124,7 +124,7 @@ function groupByUser(tickets) {
       ultima_log: { data: ultima_log_data },
     } = ticket;
 
-    if (motivo_pausa === "PENDENTE CLIENTE") {
+    if (motivo_pausa === 'PENDENTE CLIENTE') {
       acc[contato].push({
         codigo: codigo,
         assunto: assunto,
@@ -150,7 +150,7 @@ function sendEmail(setor, toEmails, tickets) {
     },
     tls: {
       ciphers: 'SSLv3',
-      rejectUnauthorized: false // ignora erro de certificado
+      rejectUnauthorized: false, // ignora erro de certificado
     },
     connectionTimeout: 60000, // 60 segundos
     logger: false, // ativa os logs
@@ -164,7 +164,7 @@ function sendEmail(setor, toEmails, tickets) {
     .map((ticket) => {
       const diasSemInteracao = dataAtualServidor.diff(
         moment(ticket.ultima_log_data || ticket.data_criacao),
-        "days"
+        'days'
       );
       return {
         ...ticket,
@@ -173,7 +173,7 @@ function sendEmail(setor, toEmails, tickets) {
     })
 
     // Filtra tickets com menos de 2 dias de interação
-    .filter((ticket) => ticket.diasSemInteracao >= 2)
+    //.filter((ticket) => ticket.diasSemInteracao >= 2)
     .sort((a, b) => b.diasSemInteracao - a.diasSemInteracao);
 
   // Se não houver tickets após a filtragem, não enviar e-mail
@@ -190,7 +190,7 @@ function sendEmail(setor, toEmails, tickets) {
       return `
       <tr>
         <td>${ticket.codigo}</td>
-        <td>${moment(ticket.data_criacao).format("DD/MM/YYYY")}</td>
+        <td>${moment(ticket.data_criacao).format('DD/MM/YYYY')}</td>
         <td>${ticket.diasSemInteracao}</td>
         <td>${ticket.assunto}</td>
         <td>${ticket.motivo_pausa}</td>
@@ -198,7 +198,7 @@ function sendEmail(setor, toEmails, tickets) {
       </tr>
     `;
     })
-    .join("");
+    .join('');
 
   // Contador total de tickets
   const totalTickets = orderedTickets.length;
@@ -232,17 +232,17 @@ function sendEmail(setor, toEmails, tickets) {
 `;
 
   const mailOptions = {
-    from: "cpd4@conab.com.br",
-    to: toEmails.join(", "), // Envia para os e-mails definidos no setor
+    from: 'cpd4@conab.com.br',
+    to: toEmails.join(', '), // Envia para os e-mails definidos no setor
     cc: getEmails(
-      "alexsandro.santos@conab.com.br",
+      'alexsandro.santos@conab.com.br',
       [
-        "marcelo.pimentel@conab.com.br",
-        "hamilton.bertolucci@conab.com.br",
-        "8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms",
-      ].join(", ")
+        'marcelo.pimentel@conab.com.br',
+        'hamilton.bertolucci@conab.com.br',
+        '8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms',
+      ].join(', ')
     ), // Converte o array para string de e-mails separados por vírgula
-    bcc: "alexsandro.santos@conab.com.br", // E-mails em cópia oculta
+    bcc: 'alexsandro.santos@conab.com.br', // E-mails em cópia oculta
     subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
     html: htmlContent,
   };
@@ -256,19 +256,17 @@ function sendEmail(setor, toEmails, tickets) {
     }
   });
 
-  transporter.verify(function(error, success) {
+  transporter.verify(function (error, success) {
     if (error) {
-          console.log('Erro de conexão:', error);
+      console.log('Erro de conexão:', error);
     } else {
-          console.log('O servidor está pronto para receber nossas mensagens');
+      console.log('O servidor está pronto para receber nossas mensagens');
     }
   });
-
-
 }
 
 function capitalizeFirstLetter(string) {
-  if (!string || typeof string !== "string") return "";
+  if (!string || typeof string !== 'string') return '';
   return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
