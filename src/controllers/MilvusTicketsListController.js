@@ -1,169 +1,119 @@
 const nodemailer = require('nodemailer');
-
 const axios = require('axios');
 const moment = require('moment');
-require('dotenv').config(); // Carrega variáveis de ambiente
+require('dotenv').config();
 
 axios.defaults.headers.common['Authorization'] = process.env.API_AUTH_KEY;
-
 const url = 'https://apiintegracao.milvus.com.br/api/chamado/listagem';
 
-let isDev = false;
+let isDev = true;
 
-// Função para definir emails de acordo com o ambiente
+// Função para definir e-mails de acordo com o ambiente
 const getEmails = (devEmail, prodEmails) => (isDev ? [devEmail] : prodEmails);
 
-// Definindo os setores com seus respectivos e-mails e usuários
+// Configuração dos setores com seus respectivos e-mails
 const setores = {
-  Vendas: {
+  VENDAS: {
     emails: getEmails('alexsandro.santos@conab.com.br', [
       'carlos.augusto@conab.com.br',
       'alex.dutra@conab.com.br',
       'cesar.augusto@conab.com.br',
     ]),
-    users: ['alex', 'luis', 'andrew', 'cesar', 'wander', 'carlos'],
   },
-  Astec: {
+  ASTEC: {
     emails: getEmails('alexsandro.santos@conab.com.br', [
       'laercio.silva@conab.com.br',
     ]),
-    users: ['laercio', 'renan', 'joão', 'ana', 'fernando', 'edson'],
   },
-  Suprimentos: {
+  SUPRIMENTOS: {
     emails: getEmails('alexsandro.santos@conab.com.br', [
       'setor_compras@conab.com.br',
     ]),
-    users: ['luiz', 'vinicius', 'lucas', 'weleson', 'edgar'],
   },
-  Financeiro: {
+  'FISCAL / FINANCEIRO': {
     emails: getEmails('alexsandro.santos@conab.com.br', [
       'setor_financeiro@conab.com.br',
     ]),
-    users: ['fabio', 'cintia', 'andressa', 'dalva', 'raiane', 'fernanda'],
-  },
-  // Adicione mais setores conforme necessário
-};
-
-let reqBody = {
-  filtro_body: {
-    status: 3,
   },
 };
 
+// Parâmetros para consulta de tickets
+let reqBody = { filtro_body: { status: 3 } };
+
+// Classe principal para gerenciar a execução da tarefa
 class MilvusTicketsList {
   async executeTask() {
-    console.log('INIT', 'INIT');
-    // Se precisar de query params
-    const params = {
-      total_registros: 200,
-    };
-    const tickets = await axios.post(url, reqBody, {
-      params: params,
-      headers: {
-        'Content-Type': 'application/json', // Isso geralmente é configurado automaticamente
-      },
-    });
+    console.log('Iniciando a tarefa de envio de tickets...');
+    const params = { total_registros: 200 };
 
-    const groupedTickets = groupByUser(tickets.data.lista);
+    try {
+      const ticketsResponse = await axios.post(url, reqBody, { params });
+      const tickets = ticketsResponse.data.lista;
 
-    // Função para normalizar o nome (remover pontos, pegar o primeiro nome e garantir formato correto)
-    const normalizeUserName = (user) =>
-      user.trim().split('.')[0].split(' ')[0].toLowerCase();
+      // Filtrar apenas tickets com motivo 'PENDENTE CLIENTE'
+      const filteredTickets = tickets.filter(
+        (ticket) => ticket.motivo_pausa === 'PENDENTE CLIENTE'
+      );
 
-    // Objeto para agrupar os tickets por setor
-    const setorTickets = {};
+      // Agrupar tickets por setor
+      const setorTickets = this.groupTicketsBySetor(filteredTickets);
 
-    // Itera sobre os tickets e agrupa por nome normalizado
-    Object.entries(groupedTickets).forEach(([user, tickets]) => {
-      const normalizedUser = normalizeUserName(user);
-
-      // Verifica se o usuário pertence a algum setor
-      Object.entries(setores).forEach(([setor, config]) => {
-        if (config.users.includes(normalizedUser)) {
-          if (!setorTickets[setor]) {
-            setorTickets[setor] = []; // Inicializa o array se não existir
+      // Enviar e-mails para cada setor com os tickets agrupados
+      const emailPromises = Object.entries(setorTickets).map(
+        async ([setor, tickets]) => {
+          const { emails } = setores[setor] || {};
+          if (tickets.length > 0 && emails && emails.length > 0) {
+            console.log(
+              `Enviando tickets do setor ${setor} para: ${emails.join(', ')}`
+            );
+            await sendEmail(setor, emails, tickets);
           }
-          setorTickets[setor].push(...tickets);
         }
-      });
-    });
+      );
 
-    const delay = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+      await Promise.allSettled(emailPromises);
+    } catch (error) {
+      console.error('Erro ao obter tickets:', error.message);
+    }
+  }
 
-    // Envia emails para cada setor com os tickets agrupados
-    const emailPromises = Object.entries(setorTickets).map(
-      async ([setor, tickets]) => {
-        const { emails } = setores[setor];
-        if (tickets.length > 0 && emails.length > 0) {
-          console.log(
-            `Enviando tickets do setor ${setor} para: ${emails.join(', ')}`
-          );
-          await sendEmail(setor, emails, tickets);
-          await delay(30000); // Espera 10 segundos entre os envios
-        }
-      }
-    );
+  // Função para agrupar tickets pelo campo 'setor'
+  groupTicketsBySetor(tickets) {
+    return tickets.reduce((acc, ticket) => {
+      const { setor } = ticket;
+      if (!setor) return acc;
 
-    await Promise.all(emailPromises);
+      const normalizedSetor = setor.toUpperCase();
+      if (!acc[normalizedSetor]) acc[normalizedSetor] = [];
+      acc[normalizedSetor].push(ticket);
+
+      return acc;
+    }, {});
   }
 }
 
-// Função para agrupar chamados por usuário
-function groupByUser(tickets) {
-  return tickets.reduce((acc, ticket) => {
-    const { contato } = ticket;
-    if (!acc[contato]) {
-      acc[contato] = [];
-    }
-
-    const {
-      codigo,
-      assunto,
-      motivo_pausa,
-      data_criacao,
-      ultima_log: { data: ultima_log_data },
-    } = ticket;
-
-    if (motivo_pausa === 'PENDENTE CLIENTE') {
-      acc[contato].push({
-        codigo: codigo,
-        assunto: assunto,
-        motivo_pausa: motivo_pausa,
-        data_criacao: data_criacao,
-        ultima_log_data: ultima_log_data,
-        contato: contato,
-      });
-    }
-
-    return acc;
-  }, {});
-}
-
-function sendEmail(setor, toEmails, tickets) {
+// Função para enviar e-mails com os tickets pendentes
+async function sendEmail(setor, toEmails, tickets) {
   const transporter = nodemailer.createTransport({
     host: process.env.SMTP_HOST,
     port: process.env.SMTP_PORT,
-    secure: false, // ajuste se necessário (true para SSL, false para TLS)
+    secure: false,
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    tls: {
-      ciphers: 'SSLv3',
-      rejectUnauthorized: false, // ignora erro de certificado
-    },
-    connectionTimeout: 60000, // 60 segundos
-    logger: false, // ativa os logs
-    debug: false, // ativa o modo de depuração
+    tls: { ciphers: 'SSLv3', rejectUnauthorized: false },
+    connectionTimeout: 60000,
   });
 
   const dataAtualServidor = moment();
 
-  // Ordenar tickets pela diferença de dias sem interação
+  // Calcular "dias sem interação" com base em 'ultima_log.data'
   const orderedTickets = tickets
     .map((ticket) => {
+      const ultimaInteracao = ticket.ultima_log?.data || ticket.data_criacao;
       const diasSemInteracao = dataAtualServidor.diff(
-        moment(ticket.ultima_log_data || ticket.data_criacao),
+        moment(ultimaInteracao),
         'days'
       );
       return {
@@ -171,12 +121,8 @@ function sendEmail(setor, toEmails, tickets) {
         diasSemInteracao,
       };
     })
-
-    // Filtra tickets com menos de 2 dias de interação
-    //.filter((ticket) => ticket.diasSemInteracao >= 2)
     .sort((a, b) => b.diasSemInteracao - a.diasSemInteracao);
 
-  // Se não houver tickets após a filtragem, não enviar e-mail
   if (orderedTickets.length === 0) {
     console.log(
       `Nenhum ticket relevante para o setor ${setor}, e-mail não enviado.`
@@ -184,56 +130,59 @@ function sendEmail(setor, toEmails, tickets) {
     return;
   }
 
-  // Criando a tabela com os dados
+  // Criar a tabela com os tickets
   const tableRows = orderedTickets
-    .map((ticket) => {
-      return `
+    .map(
+      (ticket) => `
       <tr>
         <td>${ticket.codigo}</td>
         <td>${moment(ticket.data_criacao).format('DD/MM/YYYY')}</td>
-        <td>${ticket.diasSemInteracao}</td>
+        <td style="text-align: center;">${
+          ticket.diasSemInteracao
+        }</td> <!-- Centralizar esta coluna -->
         <td>${ticket.assunto}</td>
         <td>${ticket.motivo_pausa}</td>
         <td>${ticket.contato}</td>
-      </tr>
-    `;
-    })
+      </tr>`
+    )
     .join('');
 
-  // Contador total de tickets
   const totalTickets = orderedTickets.length;
 
+  // Montar o conteúdo do e-mail usando o layout fornecido
   const htmlContent = `
-  <div  style="color: red;"><b>[Mensagem automática, por favor, não responda a esse e-mail]</b></div>
-  <br/>
-  <div>Olá, prezados, tudo bem? </div>
-  <br/>
-  <div>O(s) ticket(s) listado(s) abaixo aguarda(m) sua interação no Milvus. Sua resposta é crucial para avançarmos na resolução do(s) caso(s) ou encerrarmos o atendimento, permitindo o seguimento para outras solicitações, dúvidas e correções.</div>
-  <br/>
+    <div style="color: red;">
+      <b>[Mensagem automática, por favor, não responda a esse e-mail]</b>
+    </div>
+    <br/>
+    <div>Olá, prezados, tudo bem?</div>
+    <br/>
+    <div>O(s) ticket(s) listado(s) abaixo aguarda(m) sua interação no Milvus.
+    Sua resposta é crucial para avançarmos na resolução do(s) caso(s) ou encerrarmos o atendimento,
+    permitindo o seguimento para outras solicitações, dúvidas e correções.</div>
+    <br/>
+    <h2>Ticket(s) pendente(s) de interação</h2>
+    <table border="1" cellpadding="10" cellspacing="0">
+      <thead>
+        <tr>
+          <th>N°</th>
+          <th>Data Criação</th>
+          <th>Dias sem Interação</th>
+          <th>Assunto</th>
+          <th>Situação</th>
+          <th>Contato</th>
+        </tr>
+      </thead>
+      <tbody>${tableRows}</tbody>
+    </table>
+    <br/>
+    <div>Total de tickets: <b>${totalTickets}</b></div>
+  `;
 
-   <h2>Ticket(s) pendente(s) de interação</h2>
-  <table border="1" cellpadding="10" cellspacing="0">
-    <thead>
-      <tr>
-        <th>N°</th>
-        <th>Data Criação</th>
-        <th>Dias sem interação</th>
-        <th>Assunto</th>
-        <th>Situação</th>
-        <th>Contato</th>
-      </tr>
-    </thead>
-    <tbody>
-      ${tableRows}
-    </tbody>
-  </table>
-  <br/>
-    <div>Total de tickets: <b>${totalTickets}</b></div> <!-- Adicionando o contador total -->
-`;
-
-  const mailOptions = {
+  // Configurar e enviar o e-mail
+  await transporter.sendMail({
     from: 'cpd4@conab.com.br',
-    to: toEmails.join(', '), // Envia para os e-mails definidos no setor
+    to: toEmails.join(', '),
     cc: getEmails(
       'alexsandro.santos@conab.com.br',
       [
@@ -245,29 +194,13 @@ function sendEmail(setor, toEmails, tickets) {
     bcc: 'alexsandro.santos@conab.com.br', // E-mails em cópia oculta
     subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
     html: htmlContent,
-  };
-
-  transporter.sendMail(mailOptions, (error, info) => {
-    if (error) {
-      console.log(`Erro ao enviar email para setor ${setor}:`, error);
-      console.log(`Erro detalhado: ${JSON.stringify(error, null, 2)}`);
-    } else {
-      console.log(`E-mail enviado para setor ${setor}: ${info.response}`);
-    }
   });
 
-  transporter.verify(function (error, success) {
-    if (error) {
-      console.log('Erro de conexão:', error);
-    } else {
-      console.log('O servidor está pronto para receber nossas mensagens');
-    }
-  });
+  console.log(`E-mail enviado para o setor ${setor}`);
 }
 
-function capitalizeFirstLetter(string) {
-  if (!string || typeof string !== 'string') return '';
-  return string.charAt(0).toUpperCase() + string.slice(1);
-}
+// Executar a tarefa
+const milvusTicketsList = new MilvusTicketsList();
+// milvusTicketsList.executeTask();
 
-module.exports = new MilvusTicketsList();
+module.exports = milvusTicketsList;
