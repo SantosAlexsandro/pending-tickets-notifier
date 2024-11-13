@@ -102,8 +102,7 @@ async function sendEmail(setor, toEmails, tickets) {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    tls: { ciphers: 'SSLv3', rejectUnauthorized: false },
-    connectionTimeout: 60000,
+    tls: { ciphers: 'SSLv3', rejectUnauthorized: false }
   });
 
   const dataAtualServidor = moment();
