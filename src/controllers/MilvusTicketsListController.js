@@ -94,45 +94,46 @@ class MilvusTicketsList {
 
 // Função para enviar e-mails com os tickets pendentes
 async function sendEmail(setor, toEmails, tickets) {
-  const transporter = nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: process.env.SMTP_PORT,
-    secure: false,
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-    tls: { ciphers: 'SSLv3', rejectUnauthorized: false }
-  });
+  try {
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: process.env.SMTP_PORT,
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+      tls: { ciphers: 'SSLv3', rejectUnauthorized: false },
+    });
 
-  const dataAtualServidor = moment();
+    const dataAtualServidor = moment();
 
-  // Calcular "dias sem interação" com base em 'ultima_log.data'
-  const orderedTickets = tickets
-    .map((ticket) => {
-      const ultimaInteracao = ticket.ultima_log?.data || ticket.data_criacao;
-      const diasSemInteracao = dataAtualServidor.diff(
-        moment(ultimaInteracao),
-        'days'
+    // Calcular "dias sem interação" com base em 'ultima_log.data'
+    const orderedTickets = tickets
+      .map((ticket) => {
+        const ultimaInteracao = ticket.ultima_log?.data || ticket.data_criacao;
+        const diasSemInteracao = dataAtualServidor.diff(
+          moment(ultimaInteracao),
+          'days'
+        );
+        return {
+          ...ticket,
+          diasSemInteracao,
+        };
+      })
+      .sort((a, b) => b.diasSemInteracao - a.diasSemInteracao);
+
+    if (orderedTickets.length === 0) {
+      console.log(
+        `Nenhum ticket relevante para o setor ${setor}, e-mail não enviado.`
       );
-      return {
-        ...ticket,
-        diasSemInteracao,
-      };
-    })
-    .sort((a, b) => b.diasSemInteracao - a.diasSemInteracao);
+      return;
+    }
 
-  if (orderedTickets.length === 0) {
-    console.log(
-      `Nenhum ticket relevante para o setor ${setor}, e-mail não enviado.`
-    );
-    return;
-  }
-
-  // Criar a tabela com os tickets
-  const tableRows = orderedTickets
-    .map(
-      (ticket) => `
+    // Criar a tabela com os tickets
+    const tableRows = orderedTickets
+      .map(
+        (ticket) => `
       <tr>
         <td>${ticket.codigo}</td>
         <td>${moment(ticket.data_criacao).format('DD/MM/YYYY')}</td>
@@ -143,13 +144,13 @@ async function sendEmail(setor, toEmails, tickets) {
         <td>${ticket.motivo_pausa}</td>
         <td>${ticket.contato}</td>
       </tr>`
-    )
-    .join('');
+      )
+      .join('');
 
-  const totalTickets = orderedTickets.length;
+    const totalTickets = orderedTickets.length;
 
-  // Montar o conteúdo do e-mail usando o layout fornecido
-  const htmlContent = `
+    // Montar o conteúdo do e-mail usando o layout fornecido
+    const htmlContent = `
     <div style="color: red;">
       <b>[Mensagem automática, por favor, não responda a esse e-mail]</b>
     </div>
@@ -178,24 +179,29 @@ async function sendEmail(setor, toEmails, tickets) {
     <div>Total de tickets: <b>${totalTickets}</b></div>
   `;
 
-  // Configurar e enviar o e-mail
-  await transporter.sendMail({
-    from: 'cpd4@conab.com.br',
-    to: toEmails.join(', '),
-    cc: getEmails(
-      'alexsandro.santos@conab.com.br',
-      [
-        'marcelo.pimentel@conab.com.br',
-        'hamilton.bertolucci@conab.com.br',
-        '8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms',
-      ].join(', ')
-    ), // Converte o array para string de e-mails separados por vírgula
-    bcc: 'alexsandro.santos@conab.com.br', // E-mails em cópia oculta
-    subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
-    html: htmlContent,
-  });
+    // Configurar e enviar o e-mail
+    await transporter.sendMail({
+      from: 'cpd4@conab.com.br',
+      to: toEmails.join(', '),
+      cc: getEmails(
+        'alexsandro.santos@conab.com.br',
+        [
+          'marcelo.pimentel@conab.com.br',
+          'hamilton.bertolucci@conab.com.br',
+          '8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms',
+        ].join(', ')
+      ), // Converte o array para string de e-mails separados por vírgula
+      bcc: 'alexsandro.santos@conab.com.br', // E-mails em cópia oculta
+      subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
+      html: htmlContent,
+    });
 
-  console.log(`E-mail enviado para o setor ${setor}`);
+    console.log(`E-mail enviado para o setor ${setor}`);
+  } catch (error) {
+    console.error(
+      `Erro ao enviar e-mail para o setor ${setor}: ${error.message}`
+    );
+  }
 }
 
 // Executar a tarefa
