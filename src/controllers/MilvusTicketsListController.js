@@ -67,7 +67,7 @@ class MilvusTicketsList {
               `Enviando tickets do setor ${setor} para: ${emails.join(', ')}`
             );
             await sendEmail(setor, emails, tickets);
-            await delay(15000); // Aguarda 15 segundos entre cada envio
+            // await delay(15000); // Aguarda 15 segundos entre cada envio
           }
         }
       );
@@ -104,7 +104,12 @@ async function sendEmail(setor, toEmails, tickets) {
         user: process.env.SMTP_USER,
         pass: process.env.SMTP_PASS,
       },
-      rejectUnauthorized: true
+      tls: {
+        rejectUnauthorized: true, // Valida certificados
+      },
+      pool: true, // Habilita o uso de pool de conexões
+      maxConnections: 3, // Limita a 3 conexões simultâneas
+      maxMessages: 100, // Limite de mensagens por conexão
     });
 
     const dataAtualServidor = moment();
