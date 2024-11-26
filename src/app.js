@@ -44,7 +44,7 @@ class App {
 
   startCronJob() {
     // Configura o cron job para rodar a cada minuto
-    cron.schedule("30 7 * * 1,2,3,4,5", () => {
+    cron.schedule("2 * * * 1,2,3,4,5", () => {
       console.log("Executando diariamente as 7:30");
       MilvusTicketsList.executeTask(); // Chama a função sem req e res
     });
