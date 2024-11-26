@@ -67,6 +67,7 @@ class MilvusTicketsList {
               `Enviando tickets do setor ${setor} para: ${emails.join(', ')}`
             );
             await sendEmail(setor, emails, tickets);
+            await delay(15000); // Aguarda 15 segundos entre cada envio
           }
         }
       );
