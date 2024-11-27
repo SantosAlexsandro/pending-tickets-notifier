@@ -59,17 +59,21 @@ class MilvusTicketsList {
       const setorTickets = this.groupTicketsBySetor(filteredTickets);
 
       // Enviar e-mails para cada setor com os tickets agrupados
-      const emailPromises = Object.entries(setorTickets).map(
-        async ([setor, tickets]) => {
-          const { emails } = setores[setor] || {};
-          if (tickets.length > 0 && emails && emails.length > 0) {
-            console.log(
-              `Enviando tickets do setor ${setor} para: ${emails.join(', ')}`
-            );
-            await sendEmail(setor, emails, tickets);
-          }
+      async function delay(ms) {
+        return new Promise((resolve) => setTimeout(resolve, ms));
+      }
+
+      // Adicionar delay entre envios
+      for (const [setor, tickets] of Object.entries(setorTickets)) {
+        const { emails } = setores[setor] || {};
+        if (tickets.length > 0 && emails && emails.length > 0) {
+          console.log(
+            `Enviando tickets do setor ${setor} para: ${emails.join(', ')}`
+          );
+          await sendEmail(setor, emails, tickets);
+          await delay(15000); // Aguarda 15 segundos entre cada envio
         }
-      );
+      }
 
       await Promise.allSettled(emailPromises);
     } catch (error) {
