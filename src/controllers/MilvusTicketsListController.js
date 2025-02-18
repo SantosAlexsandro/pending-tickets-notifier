@@ -200,7 +200,7 @@ async function sendEmail(setor, toEmails, tickets) {
           '8e45ff98.conabconserbombas.onmicrosoft.com@amer.teams.ms',
         ].join(', ')
       ), // Converte o array para string de e-mails separados por vírgula
-      bcc: 'atendimento.ti@conab.com.br', // E-mails em cópia oculta
+      bcc: ['atendimento.ti@conab.com.br', 'alexsandro.santos@conab.com.br'].join(', '), // E-mails em cópia oculta
       subject: `Ticket(s) pendente(s) de interação para o setor ${setor}`,
       html: htmlContent,
     });
