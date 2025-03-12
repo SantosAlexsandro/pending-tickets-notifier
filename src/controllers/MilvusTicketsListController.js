@@ -16,8 +16,7 @@ const setores = {
   VENDAS: {
     emails: getEmails('alexsandro.santos@conab.com.br', [
       'carlos.augusto@conab.com.br',
-      'alex.dutra@conab.com.br',
-      'cesar.augusto@conab.com.br',
+      'alex.dutra@conab.com.br'
     ]),
   },
   ASTEC: {
@@ -190,7 +189,7 @@ async function sendEmail(setor, toEmails, tickets) {
 
     // Configurar e enviar o e-mail
     await transporter.sendMail({
-      from: 'cpd4@conab.com.br',
+      from: 'no-reply@conab.com.br',
       to: toEmails.join(', '),
       cc: getEmails(
         'alexsandro.santos@conab.com.br',

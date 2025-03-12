@@ -7,7 +7,7 @@ const urlBase = "http://riosoft.xbotdesk.com.br/api";
 
 const ticketsListUrl =
   urlBase +
-  "/Ticket/RetrievePage?filter=IDEstado=10&order=&pageSize=20&pageIndex=1";
+  "/Ticket/RetrievePage?filter=IDEstado=10||IDEstado=5||IDEstado=4&order=&pageSize=25&pageIndex=1";
 
 const tokenApiUrl = urlBase + "/RsLogin/Login";
 
@@ -76,6 +76,12 @@ async function sendEmail(tickets) {
   const orderedTickets = tickets
     .map((ticket) => {
       const ultimaInteracao = ticket.DataHoraAlteracaoEstado;
+      if (!ultimaInteracao) {
+        return {
+          ...ticket,
+          diasSemInteracao: "0",
+        };
+      }
       const diasSemInteracao = dataAtualServidor.diff(
         moment(ultimaInteracao),
         "days"
@@ -129,7 +135,7 @@ async function sendEmail(tickets) {
 
   // Configurar e enviar o e-mail
   await transporter.sendMail({
-    from: "cpd4@conab.com.br",
+    from: "no-reply@conab.com.br",
     to: "marcelo.pimentel@conab.com.br",
     cc: "atendimento.ti@conab.com.br",
     bcc: "alexsandro.santos@conab.com.br", // E-mails em cópia oculta
