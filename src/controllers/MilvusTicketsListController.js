@@ -15,7 +15,6 @@ const getEmails = (devEmail, prodEmails) => (isDev ? [devEmail] : prodEmails);
 const setores = {
   VENDAS: {
     emails: getEmails('alexsandro.santos@conab.com.br', [
-      'carlos.augusto@conab.com.br',
       'alex.dutra@conab.com.br'
     ]),
   },
