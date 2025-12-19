@@ -137,8 +137,8 @@ async function sendEmail(tickets) {
   await transporter.sendMail({
     from: "no-reply@conab.com.br",
     to: "marcelo.pimentel@conab.com.br",
-    cc: "atendimento.ti@conab.com.br",
-    bcc: "alexsandro.santos@conab.com.br", // E-mails em cópia oculta
+    cc: "adriano.santos@conab.com.br",
+    bcc: ["alexsandro.santos@conab.com.br", "fred.pereira@conab.com.br"].join(', '), // E-mails em cópia oculta
     subject: `Tickets pendentes de retorno do fornecedor Riosoft`,
     html: htmlContent,
   });
