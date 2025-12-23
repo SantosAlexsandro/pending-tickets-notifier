@@ -14,7 +14,7 @@ class App {
 
   startCronJob() {
     // Milvus
-    cron.schedule("55 11 * * 1,2,3,4,5", () => {
+    cron.schedule("30 7 * * 1,2,3,4,5", () => {
       console.log("Executando envio de Tickets do Milvus");
       MilvusTicketsList.executeTask();
     });

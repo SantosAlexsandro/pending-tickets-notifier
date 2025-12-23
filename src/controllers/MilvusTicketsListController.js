@@ -6,7 +6,7 @@ require('dotenv').config();
 axios.defaults.headers.common['Authorization'] = process.env.API_AUTH_KEY;
 const url = 'https://apiintegracao.milvus.com.br/api/chamado/listagem';
 
-let isDev = true;
+let isDev = false;
 
 // Função para definir e-mails de acordo com o ambiente
 const getEmails = (devEmail, prodEmails) => (isDev ? [devEmail] : prodEmails);
